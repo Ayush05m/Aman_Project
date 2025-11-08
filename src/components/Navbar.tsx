@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 
 const navLinks = [
   { name: "Home", path: "/" },
+  { name: "Our Team", path: "/team" },
   { name: "Introduction", path: "/introduction" },
   { name: "Objectives", path: "/objectives" },
   { name: "Methodology", path: "/methodology" },

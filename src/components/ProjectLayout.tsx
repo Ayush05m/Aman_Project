@@ -8,6 +8,7 @@ import CelestialBody from "./CelestialBody";
 
 const pages = [
   "/",
+  "/team",
   "/introduction",
   "/objectives",
   "/methodology",

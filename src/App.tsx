@@ -10,6 +10,7 @@ import Introduction from "./pages/Introduction";
 import Objectives from "./pages/Objectives";
 import Methodology from "./pages/Methodology";
 import ClimaticZones from "./pages/ClimaticZones";
+import CalculatorPage from "./pages/Calculator";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/objectives" element={<Objectives />} />
             <Route path="/methodology" element={<Methodology />} />
             <Route path="/climatic-zones" element={<ClimaticZones />} />
+            <Route path="/calculator" element={<CalculatorPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -4,10 +4,7 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.2,
-      delayChildren: 0.2,
-    },
+    transition: { staggerChildren: 0.2, delayChildren: 0.2 },
   },
 };
 
@@ -26,8 +23,8 @@ const steps = [
 
 const Methodology = () => {
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-8">
-      <motion.h2 initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} className="text-4xl font-bold text-primary mb-12">
+    <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-background">
+      <motion.h2 initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text mb-12">
         Methodology
       </motion.h2>
       <motion.ol 
@@ -38,10 +35,10 @@ const Methodology = () => {
       >
         {steps.map((step, index) => (
             <motion.li key={index} variants={itemVariants} className="flex items-start gap-4">
-                <div className="flex-shrink-0 bg-primary text-white w-8 h-8 flex items-center justify-center rounded-full font-bold text-md">
+                <div className="flex-shrink-0 bg-primary text-primary-foreground w-8 h-8 flex items-center justify-center rounded-full font-bold text-md">
                     {index + 1}
                 </div>
-                <p className="text-gray-600 pt-1">{step}</p>
+                <p className="text-muted-foreground pt-1">{step}</p>
             </motion.li>
         ))}
       </motion.ol>

@@ -7,18 +7,19 @@ const navLinks = [
   { name: "Objectives", path: "/objectives" },
   { name: "Methodology", path: "/methodology" },
   { name: "Climatic Zones", path: "/climatic-zones" },
+  { name: "Calculator", path: "/calculator" },
 ];
 
 const Navbar = () => {
   const location = useLocation();
   return (
-    <nav className="fixed top-8 left-1/2 -translate-x-1/2 z-50 bg-white/50 backdrop-blur-lg p-2 rounded-full shadow-md border">
-      <ul className="flex items-center gap-2">
+    <nav className="fixed top-8 left-1/2 -translate-x-1/2 z-50 bg-white/50 dark:bg-black/20 backdrop-blur-lg p-2 rounded-full shadow-md border">
+      <ul className="flex items-center gap-1 flex-wrap justify-center">
         {navLinks.map((link) => (
           <li key={link.path} className="relative">
             <NavLink
               to={link.path}
-              className="block px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary transition-colors"
+              className="block px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
             >
               {link.name}
             </NavLink>

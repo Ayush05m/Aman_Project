@@ -10,6 +10,7 @@ const pages = [
   "/objectives",
   "/methodology",
   "/climatic-zones",
+  "/calculator",
 ];
 
 const ProjectLayout = () => {
@@ -29,7 +30,7 @@ const ProjectLayout = () => {
   const isLastPage = currentPageIndex === pages.length - 1;
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-gray-50">
+    <div className="relative w-full h-screen overflow-hidden bg-background">
       <Navbar />
       <AnimatePresence mode="wait">
         <main key={location.pathname} className="w-full h-full">
@@ -40,7 +41,7 @@ const ProjectLayout = () => {
         <Button
           onClick={handleNext}
           size="lg"
-          className="rounded-full shadow-lg"
+          className="rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {isLastPage ? "Back to Home" : "Next Page"}
           {isLastPage ? (

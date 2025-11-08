@@ -22,8 +22,8 @@ const objectives = [
 
 const Objectives = () => {
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-background">
-      <motion.h2 initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} className="text-4xl font-bold text-primary mb-12">
+    <div className="w-full h-full flex flex-col items-center justify-center p-8">
+      <motion.h2 initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} className="text-4xl font-bold text-white mb-12" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
         Project Objectives
       </motion.h2>
       <motion.div 
@@ -33,10 +33,10 @@ const Objectives = () => {
         className="grid md:grid-cols-3 gap-6 max-w-6xl"
       >
         {objectives.map(obj => (
-            <motion.div key={obj.title} variants={itemVariants} className="p-6 bg-card rounded-lg shadow-lg border text-center flex flex-col items-center">
-                {React.cloneElement(obj.icon, { className: "text-primary h-10 w-10 mb-4" })}
-                <h4 className="font-bold text-lg text-card-foreground mb-2">{obj.title}</h4>
-                <p className="text-sm text-muted-foreground">{obj.description}</p>
+            <motion.div key={obj.title} variants={itemVariants} className="p-6 bg-black/20 backdrop-blur-sm rounded-lg shadow-lg border border-white/20 text-center flex flex-col items-center">
+                {React.cloneElement(obj.icon, { className: "text-yellow-300 h-10 w-10 mb-4" })}
+                <h4 className="font-bold text-lg text-white mb-2">{obj.title}</h4>
+                <p className="text-sm text-white/80">{obj.description}</p>
             </motion.div>
         ))}
       </motion.div>

@@ -20,8 +20,8 @@ const steps = [
 
 const Methodology = () => {
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-background">
-      <motion.h2 initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} className="text-4xl font-bold text-primary mb-12">
+    <div className="w-full h-full flex flex-col items-center justify-center p-8">
+      <motion.h2 initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} className="text-4xl font-bold text-white mb-12" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
         Methodology
       </motion.h2>
       <motion.div 
@@ -32,12 +32,12 @@ const Methodology = () => {
       >
         {steps.map((step, index) => (
             <motion.li key={index} variants={itemVariants} className="flex items-start gap-4 list-none">
-                <div className="flex-shrink-0 bg-primary text-primary-foreground w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg">
+                <div className="flex-shrink-0 bg-black/20 border border-white/20 text-white w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg">
                     {index + 1}
                 </div>
                 <div>
-                    <h4 className="font-semibold text-lg text-foreground">{step.title}</h4>
-                    <p className="text-muted-foreground">{step.description}</p>
+                    <h4 className="font-semibold text-lg text-white">{step.title}</h4>
+                    <p className="text-white/80">{step.description}</p>
                 </div>
             </motion.li>
         ))}

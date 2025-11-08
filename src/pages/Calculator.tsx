@@ -81,17 +81,19 @@ const CalculatorPage = () => {
     });
   };
 
+  const inputStyles = "bg-black/20 border-white/20 text-white placeholder:text-white/50 focus:ring-yellow-400";
+
   return (
     <motion.div
       initial="hidden"
       animate="visible"
       exit="hidden"
       variants={containerVariants}
-      className="w-full h-full flex items-center justify-center p-4 md:p-8 bg-background"
+      className="w-full h-full flex items-center justify-center p-4 md:p-8"
     >
-      <Card className="w-full max-w-5xl bg-card/80 backdrop-blur-sm border-primary/20 shadow-2xl">
+      <Card className="w-full max-w-5xl bg-black/30 backdrop-blur-md border-white/20 shadow-2xl text-white">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-primary">
+          <CardTitle className="text-3xl font-bold text-center text-white" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
             Solar Optimization Calculator
           </CardTitle>
         </CardHeader>
@@ -99,14 +101,14 @@ const CalculatorPage = () => {
           <form onSubmit={handleCalculate} className="grid md:grid-cols-2 gap-8">
             <motion.div variants={itemVariants} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude (degrees)</Label>
-                <Input id="latitude" type="number" value={latitude} onChange={(e) => setLatitude(e.target.value === '' ? '' : parseFloat(e.target.value))} required placeholder="e.g., 21.25 for Raipur" />
+                <Label htmlFor="latitude" className="text-white/90">Latitude (degrees)</Label>
+                <Input id="latitude" type="number" value={latitude} onChange={(e) => setLatitude(e.target.value === '' ? '' : parseFloat(e.target.value))} required placeholder="e.g., 21.25 for Raipur" className={inputStyles} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="climaticZone">Climatic Zone</Label>
+                <Label htmlFor="climaticZone" className="text-white/90">Climatic Zone</Label>
                 <Select value={climaticZone} onValueChange={setClimaticZone} required>
-                  <SelectTrigger id="climaticZone"><SelectValue placeholder="Select Zone" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectTrigger id="climaticZone" className={inputStyles}><SelectValue placeholder="Select Zone" /></SelectTrigger>
+                  <SelectContent className="bg-gray-900/80 backdrop-blur-sm border-white/20 text-white">
                     <SelectItem value="hot-dry">Hot & Dry</SelectItem>
                     <SelectItem value="warm-humid">Warm & Humid</SelectItem>
                     <SelectItem value="moderate">Moderate</SelectItem>
@@ -117,14 +119,14 @@ const CalculatorPage = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="area">Available Rooftop Area (sq. meters)</Label>
-                <Input id="area" type="number" value={area} onChange={(e) => setArea(e.target.value === '' ? '' : parseFloat(e.target.value))} required placeholder="e.g., 50" />
+                <Label htmlFor="area" className="text-white/90">Available Rooftop Area (sq. meters)</Label>
+                <Input id="area" type="number" value={area} onChange={(e) => setArea(e.target.value === '' ? '' : parseFloat(e.target.value))} required placeholder="e.g., 50" className={inputStyles} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="month">Month for Analysis</Label>
+                <Label htmlFor="month" className="text-white/90">Month for Analysis</Label>
                 <Select value={month} onValueChange={setMonth} required>
-                  <SelectTrigger id="month"><SelectValue /></SelectTrigger>
-                  <SelectContent>
+                  <SelectTrigger id="month" className={inputStyles}><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-gray-900/80 backdrop-blur-sm border-white/20 text-white">
                     <SelectItem value="1">January</SelectItem><SelectItem value="2">February</SelectItem>
                     <SelectItem value="3">March</SelectItem><SelectItem value="4">April</SelectItem>
                     <SelectItem value="5">May</SelectItem><SelectItem value="6">June</SelectItem>
@@ -134,38 +136,38 @@ const CalculatorPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" className="w-full text-lg bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button type="submit" className="w-full text-lg bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
                 <CalculatorIcon className="mr-2 h-5 w-5" /> Calculate
               </Button>
             </motion.div>
             <motion.div variants={itemVariants}>
-              <div className="p-6 bg-muted/50 rounded-lg h-full">
-                <h3 className="text-xl font-semibold mb-4 text-foreground">Optimization Results</h3>
+              <div className="p-6 bg-black/20 rounded-lg h-full">
+                <h3 className="text-xl font-semibold mb-4 text-white">Optimization Results</h3>
                 {results ? (
                   <div className="space-y-3">
-                    <div className="p-3 bg-card rounded-md shadow-sm">
-                      <p className="text-muted-foreground">Optimal Tilt for Selected Month</p>
-                      <p className="font-bold text-primary text-2xl">{results.tiltAngle}°</p>
+                    <div className="p-3 bg-black/20 rounded-md shadow-sm">
+                      <p className="text-white/80">Optimal Tilt for Selected Month</p>
+                      <p className="font-bold text-yellow-300 text-2xl">{results.tiltAngle}°</p>
                     </div>
-                    <div className="p-3 bg-card rounded-md shadow-sm">
-                      <p className="text-muted-foreground">Annual Fixed-Tilt Recommendation</p>
-                      <p className="font-bold text-primary text-lg">{results.annualTilt}°</p>
+                    <div className="p-3 bg-black/20 rounded-md shadow-sm">
+                      <p className="text-white/80">Annual Fixed-Tilt Recommendation</p>
+                      <p className="font-bold text-yellow-300 text-lg">{results.annualTilt}°</p>
                     </div>
-                    <div className="p-3 bg-card rounded-md shadow-sm">
-                      <p className="text-muted-foreground">Seasonal Adjustment Strategy</p>
-                      <p className="font-bold text-primary text-base">{results.seasonalAdj}</p>
+                    <div className="p-3 bg-black/20 rounded-md shadow-sm">
+                      <p className="text-white/80">Seasonal Adjustment Strategy</p>
+                      <p className="font-bold text-yellow-300 text-base">{results.seasonalAdj}</p>
                     </div>
-                    <div className="p-3 bg-card rounded-md shadow-sm">
-                      <p className="text-muted-foreground">Potential System Configuration</p>
-                      <p className="font-bold text-primary text-base">{results.panelConfig}</p>
+                    <div className="p-3 bg-black/20 rounded-md shadow-sm">
+                      <p className="text-white/80">Potential System Configuration</p>
+                      <p className="font-bold text-yellow-300 text-base">{results.panelConfig}</p>
                     </div>
-                    <div className="p-3 bg-card rounded-md shadow-sm">
-                      <p className="text-muted-foreground">Estimated Annual Energy Generation</p>
-                      <p className="font-bold text-primary text-lg">{results.energyGen} kWh/year</p>
+                    <div className="p-3 bg-black/20 rounded-md shadow-sm">
+                      <p className="text-white/80">Estimated Annual Energy Generation</p>
+                      <p className="font-bold text-yellow-300 text-lg">{results.energyGen} kWh/year</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="flex items-center justify-center h-full text-white/70">
                     <p>Enter all values to calculate.</p>
                   </div>
                 )}

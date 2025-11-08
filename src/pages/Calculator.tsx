@@ -1,20 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Calculator as CalculatorIcon } from "lucide-react";
-
-const toRadians = (deg: number) => deg * (Math.PI / 180);
+import { Calculator as CalculatorIcon, Sun, Thermometer, Snowflake } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 
 const containerVariants = {
   hidden: { opacity: 0, scale: 0.95 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: { staggerChildren: 0.1 },
-  },
+  visible: { opacity: 1, scale: 1, transition: { staggerChildren: 0.1 } },
 };
 
 const itemVariants = {
@@ -22,31 +17,48 @@ const itemVariants = {
   visible: { y: 0, opacity: 1 },
 };
 
+// Average day of the year for each month
+const monthData = [
+  { name: "January", n: 17 }, { name: "February", n: 47 }, { name: "March", n: 75 },
+  { name: "April", n: 105 }, { name: "May", n: 135 }, { name: "June", n: 162 },
+  { name: "July", n: 198 }, { name: "August", n: 228 }, { name: "September", n: 258 },
+  { name: "October", n: 288 }, { name: "November", n: 318 }, { name: "December", n: 344 },
+];
+
+const calculateDeclination = (n: number) => {
+  return 23.45 * Math.sin((Math.PI / 180) * (360 / 365) * (284 + n));
+};
+
 const CalculatorPage = () => {
-  const [latitude, setLatitude] = useState(21.25);
-  const [dayOfYear, setDayOfYear] = useState(172);
-  const [tiltAngle, setTiltAngle] = useState(21);
-  const [results, setResults] = useState<Record<string, string> | null>(null);
+  const [latitude, setLatitude] = useState(28.7); // Default to Delhi
+  const [selectedMonth, setSelectedMonth] = useState("July");
+  const [results, setResults] = useState<Record<string, string | number> | null>(null);
 
   const handleCalculate = () => {
-    const n = dayOfYear;
-    const L = toRadians(latitude);
-    const beta = toRadians(tiltAngle);
-    const declinationAngleRad = toRadians(23.45 * Math.sin(toRadians((360 / 365) * (284 + n))));
-    const hourAngleRad = 0; // Solar noon for simplicity
-    const angleOfIncidenceRad = Math.acos(
-      Math.sin(declinationAngleRad) * Math.sin(L - beta) +
-      Math.cos(declinationAngleRad) * Math.cos(L - beta) * Math.cos(hourAngleRad)
-    );
-    
+    const month = monthData.find(m => m.name === selectedMonth);
+    if (!month) return;
+
+    const declination = calculateDeclination(month.n);
+    const optimalTilt = latitude - declination;
+
     setResults({
-      "Declination Angle (δ)": `${(declinationAngleRad * 180 / Math.PI).toFixed(2)}°`,
-      "Angle of Incidence at Noon (θ)": `${(angleOfIncidenceRad * 180 / Math.PI).toFixed(2)}°`,
-      "Optimal Tilt (Year-round)": `${latitude.toFixed(2)}°`,
-      "Optimal Tilt (Winter)": `${(latitude + 15).toFixed(2)}°`,
-      "Optimal Tilt (Summer)": `${(latitude - 15).toFixed(2)}°`,
+      "Selected Latitude (L)": latitude.toFixed(2),
+      "Solar Declination (δ)": declination.toFixed(2),
+      "Optimal Monthly Tilt (β)": optimalTilt.toFixed(2),
+      "Yearly Fixed Tilt (≈ L)": latitude.toFixed(2),
+      "Optimal Summer Tilt (L - 15°)": (latitude - 15).toFixed(2),
+      "Optimal Winter Tilt (L + 15°)": (latitude + 15).toFixed(2),
     });
   };
+
+  const resultCards = useMemo(() => {
+    if (!results) return null;
+    return [
+      { icon: <Sun className="text-accent" />, title: "Optimal for " + selectedMonth, value: `${results["Optimal Monthly Tilt (β)"]}°` },
+      { icon: <Thermometer className="text-red-500" />, title: "Optimal Summer Tilt", value: `${results["Optimal Summer Tilt (L - 15°)"]}°` },
+      { icon: <Snowflake className="text-blue-500" />, title: "Optimal Winter Tilt", value: `${results["Optimal Winter Tilt (L + 15°)"]}°` },
+    ];
+  }, [results, selectedMonth]);
 
   return (
     <motion.div
@@ -56,45 +68,58 @@ const CalculatorPage = () => {
       variants={containerVariants}
       className="w-full h-full flex items-center justify-center p-4 md:p-8 bg-background"
     >
-      <Card className="w-full max-w-4xl bg-card/80 backdrop-blur-sm border-primary/20 shadow-2xl">
+      <Card className="w-full max-w-5xl bg-card/80 backdrop-blur-sm border-primary/20 shadow-2xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
-            Solar Angle Calculator
+          <CardTitle className="text-3xl font-bold text-center text-primary">
+            Solar Panel Tilt Angle Calculator
           </CardTitle>
         </CardHeader>
         <CardContent className="grid md:grid-cols-2 gap-8">
-          <motion.div variants={itemVariants} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="latitude">Latitude (degrees)</Label>
-              <Input id="latitude" type="number" value={latitude} onChange={(e) => setLatitude(parseFloat(e.target.value) || 0)} />
+          <motion.div variants={itemVariants} className="space-y-6 p-4">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="latitude">Site Latitude (degrees)</Label>
+                <span className="font-bold text-primary text-lg">{latitude.toFixed(1)}°</span>
+              </div>
+              <Slider id="latitude" min={-90} max={90} step={0.1} value={[latitude]} onValueChange={(val) => setLatitude(val[0])} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dayOfYear">Day of the Year (1-365)</Label>
-              <Input id="dayOfYear" type="number" value={dayOfYear} onChange={(e) => setDayOfYear(parseInt(e.target.value) || 0)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tiltAngle">Panel Tilt Angle (degrees)</Label>
-              <Input id="tiltAngle" type="number" value={tiltAngle} onChange={(e) => setTiltAngle(parseFloat(e.target.value) || 0)} />
+              <Label htmlFor="month">Month</Label>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger id="month">
+                  <SelectValue placeholder="Select a month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthData.map(m => <SelectItem key={m.name} value={m.name}>{m.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <Button onClick={handleCalculate} className="w-full text-lg bg-primary hover:bg-primary/90 text-primary-foreground">
-              <CalculatorIcon className="mr-2 h-5 w-5" /> Calculate
+              <CalculatorIcon className="mr-2 h-5 w-5" /> Calculate Optimal Angle
             </Button>
           </motion.div>
           <motion.div variants={itemVariants}>
-            <div className={`p-6 bg-muted/50 rounded-lg h-full transition-all duration-300 ${results ? 'opacity-100' : 'opacity-50'}`}>
-              <h3 className="text-xl font-semibold mb-4 text-foreground">Results</h3>
+            <div className={`p-6 bg-muted/50 rounded-lg h-full transition-all duration-300`}>
+              <h3 className="text-xl font-semibold mb-4 text-foreground">Recommendations</h3>
               {results ? (
-                <ul className="space-y-3">
-                  {Object.entries(results).map(([key, value]) => (
-                    <li key={key} className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">{key}:</span>
-                      <span className="font-bold text-primary">{value}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {resultCards?.map(card => (
+                      <div key={card.title} className="p-4 bg-card rounded-lg text-center shadow">
+                        {card.icon}
+                        <p className="text-sm text-muted-foreground mt-2">{card.title}</p>
+                        <p className="text-2xl font-bold text-primary">{card.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-4 bg-card rounded-lg shadow">
+                    <h4 className="font-semibold">Year-Round Performance</h4>
+                    <p className="text-sm text-muted-foreground">For a fixed, non-adjustable setup, a tilt angle of approximately <strong className="text-primary">{results["Yearly Fixed Tilt (≈ L)"]}°</strong> is generally recommended for balanced, year-round energy production at this latitude.</p>
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <p>Enter values and click calculate.</p>
+                  <p>Enter site latitude and select a month to begin.</p>
                 </div>
               )}
             </div>

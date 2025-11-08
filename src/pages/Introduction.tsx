@@ -2,10 +2,7 @@ import { motion } from "framer-motion";
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.2 },
-  },
+  visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
 };
 
 const itemVariants = {
@@ -22,22 +19,13 @@ const Introduction = () => {
       variants={containerVariants}
       className="w-full h-full flex flex-col items-center justify-center p-8 bg-background"
     >
-      <motion.h2 variants={itemVariants} className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text mb-8">
+      <motion.h2 variants={itemVariants} className="text-4xl font-bold text-primary mb-8">
         Introduction
       </motion.h2>
       
-      <motion.div variants={itemVariants} className="max-w-3xl text-center text-lg text-foreground/80 space-y-4">
-        <p>Our project aims to optimize the solar panel setup for high energy efficiency in High-Income Group (HIG) houses, focusing on energy efficiency, urban applicability, and sustainability.</p>
-      </motion.div>
-
-      <motion.div variants={itemVariants} className="mt-12 text-center p-6 bg-card/50 backdrop-blur-sm rounded-lg border border-primary/20">
-        <h3 className="font-semibold text-foreground">Project By:</h3>
-        <div className="flex justify-center gap-4 md:gap-8 flex-wrap mt-2">
-          <span className="text-sm text-muted-foreground">Aditya Dudhe - 21119008</span>
-          <span className="text-sm text-muted-foreground">Arikathota Karthik - 21119023</span>
-          <span className="text-sm text-muted-foreground">Abhishek Kumar Roy - 21119006</span>
-        </div>
-        <p className="text-sm text-muted-foreground mt-4">Guided by: Dr. A. K. Tiwari</p>
+      <motion.div variants={itemVariants} className="max-w-4xl text-center text-lg text-foreground/80 space-y-4">
+        <p>As India's urban centers expand, so does the demand for sustainable energy. Solar photovoltaic (PV) systems present a viable solution, but their efficiency is highly dependent on installation parameters, particularly the tilt angle of the panels.</p>
+        <p>This project addresses the critical need for optimizing solar energy generation in urban residential settings. We aim to determine the ideal monthly, seasonal, and yearly fixed-tilt angles for PV panels across India's diverse climatic zones to maximize energy capture and ensure a higher return on investment for sustainable urban development.</p>
       </motion.div>
     </motion.div>
   );

@@ -17,7 +17,7 @@ const LandingPage = () => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-white to-purple-100 dark:from-gray-900 dark:via-slate-800 dark:to-indigo-900 transition-colors duration-700" />
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-200 via-white to-yellow-100 dark:from-slate-900 dark:via-blue-900 dark:to-gray-900 transition-colors duration-700" />
       
       <div className="relative z-10">
         <motion.button
@@ -42,17 +42,17 @@ const LandingPage = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 text-transparent bg-clip-text"
+          className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-orange-500 to-yellow-400 dark:from-yellow-400 dark:to-orange-300 text-transparent bg-clip-text"
         >
-          Solar Optimization for Urban Residences
+          Solar Energy Optimization for Urban Utilization
         </motion.h1>
         <motion.p 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.5 }}
-          className="mt-4 text-xl md:text-2xl text-gray-500 dark:text-gray-400"
+          className="mt-4 text-xl md:text-2xl text-gray-600 dark:text-gray-300"
         >
-          Building a Sustainable Future
+          Maximizing Photovoltaic Efficiency in Indian Climatic Zones
         </motion.p>
       </div>
     </motion.div>

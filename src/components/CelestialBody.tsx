@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
 
-// Variants for the main sun container (handles opacity and scale)
+// Variants for the main sun container (handles opacity, scale, and position)
 const sunContainerVariants = {
-  day: { opacity: 1, scale: 1 },
-  evening: { opacity: 1, scale: 1.05 },
+  day: { opacity: 1, scale: 1, y: "0%" },
+  evening: { opacity: 1, scale: 1.05, y: "0%" },
   night: {
     opacity: 0,
     scale: 1.05,
+    y: "100%",
   },
 };
 
@@ -26,12 +27,13 @@ const sunCoreVariants = {
   },
 };
 
-// Variants for the moon image
+// Variants for the moon image (handles opacity and position)
 const moonVariants = {
-  day: { opacity: 0 },
-  evening: { opacity: 0 },
+  day: { opacity: 0, y: "100%" },
+  evening: { opacity: 0, y: "100%" },
   night: {
     opacity: 1,
+    y: "0%",
     filter:
       "brightness(1.1) drop-shadow(0 0 25px #e0e0e0) drop-shadow(0 0 40px #bdbdbd)",
   },

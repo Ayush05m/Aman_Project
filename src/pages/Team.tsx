@@ -23,9 +23,9 @@ const mentor = {
 };
 
 const teamMembers = [
-  { name: "Aditya Dudhe", roll: "21119008" },
-  { name: "Arikathota Karthik", roll: "21119023" },
-  { name: "Abhishek Kumar Roy", roll: "21119006" },
+  { name: "Aman Singh Thakur", roll: "22119009" },
+  { name: "Anmol kumar Jaiswal", roll: "22119906" },
+  { name: "Sonali Singh", roll: "22119096" },
 ];
 
 const TeamPage = () => {

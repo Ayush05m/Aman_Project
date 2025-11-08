@@ -4,6 +4,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { showError } from '@/utils/toast';
 
+interface SolarResults {
+  tilt: { optimal: number; monthly: number; annual: number; summer: number; winter: number; sunAltitude: number; };
+  radiation: { dni: number; dhi: number; ghi: number; poi: number; irradiance: number; };
+  system: { numPanels: number; totalArea: number; spaceUtil: number; capacity: number; };
+  energy: { daily: number; monthly: number; annual: number; peakPower: number; capacityFactor: number; };
+  economics: { totalCost: number; annualSavings: number; lifetimeSavings: number; payback: number; roi: number; npv: number; };
+  environment: { co2: number; co2Lifetime: number; trees: number; coal: number; cars: string; };
+  recommendations: string[];
+}
+
 export default function CalculatorPage() {
   const [formData, setFormData] = useState({
     latitude: 21.25,
@@ -20,7 +30,7 @@ export default function CalculatorPage() {
     installCost: 50000
   });
 
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<SolarResults | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     location: true,
     system: true,
@@ -31,10 +41,12 @@ export default function CalculatorPage() {
   const [calculationMode, setCalculationMode] = useState<'month' | 'day'>('month');
   const [date, setDate] = useState<Date | undefined>(new Date());
 
-  const toggleSection = (section: string) => {
+  type SectionKeys = keyof typeof expandedSections;
+
+  const toggleSection = (section: SectionKeys) => {
     setExpandedSections(prev => ({
       ...prev,
-      [section]: !prev[section as keyof typeof prev]
+      [section]: !prev[section]
     }));
   };
 
@@ -187,7 +199,7 @@ export default function CalculatorPage() {
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {Object.keys(expandedSections).map((sectionKey) => (
+              {(Object.keys(expandedSections) as SectionKeys[]).map((sectionKey) => (
                 <div key={sectionKey} className="border border-purple-400/30 rounded-2xl p-6 bg-white/5">
                   <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleSection(sectionKey)}>
                     <div className="flex items-center gap-3">
@@ -197,9 +209,9 @@ export default function CalculatorPage() {
                       {sectionKey === 'economic' && <DollarSign className="w-6 h-6 text-purple-400" />}
                       <h3 className="text-xl font-semibold text-white capitalize">{sectionKey} Parameters</h3>
                     </div>
-                    {expandedSections[sectionKey as keyof typeof expandedSections] ? <ChevronUp className="w-5 h-5 text-purple-400" /> : <ChevronDown className="w-5 h-5 text-purple-400" />}
+                    {expandedSections[sectionKey] ? <ChevronUp className="w-5 h-5 text-purple-400" /> : <ChevronDown className="w-5 h-5 text-purple-400" />}
                   </div>
-                  {expandedSections[sectionKey as keyof typeof expandedSections] && (
+                  {expandedSections[sectionKey] && (
                     <div className="mt-4 space-y-4">
                       {sectionKey === 'location' && <>
                         <div><label className="block text-purple-200 mb-2 font-medium">Latitude (°)</label><input type="number" name="latitude" value={formData.latitude} onChange={handleInputChange} step="0.01" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500" placeholder="e.g., 21.25" /></div>

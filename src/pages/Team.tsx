@@ -47,8 +47,8 @@ const TeamPage = () => {
       <motion.div variants={itemVariants} className="w-full max-w-5xl">
         <Card className="bg-black/20 backdrop-blur-sm border-white/20 text-white shadow-2xl">
           <CardContent className="p-12 flex flex-col md:flex-row items-center gap-10">
-            <Avatar className="w-48 h-48 border-4 border-yellow-300 flex-shrink-0">
-              <AvatarImage src={mentor.image} alt={mentor.name} />
+            <Avatar className="w-56 h-56 border-4 border-yellow-300 flex-shrink-0">
+              <AvatarImage src={mentor.image} alt={mentor.name} className="object-cover" />
               <AvatarFallback>{mentor.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="text-center md:text-left">

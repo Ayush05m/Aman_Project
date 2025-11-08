@@ -35,11 +35,6 @@ const steps = [
     description:
       "Develop and apply a code-based approach to determine the optimal installation area for maximizing solar energy generation.",
   },
-  {
-    title: "Model Validation",
-    description:
-      "Validate the calculated tilt angles using simulations and compare them with existing models for accuracy.",
-  },
 ];
 
 const Methodology = () => {

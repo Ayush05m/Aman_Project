@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calculator as CalculatorIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { showError } from "@/utils/toast";
 
 const containerVariants = {
   hidden: { opacity: 0, scale: 0.95 },
@@ -31,30 +34,51 @@ const CalculatorPage = () => {
   const [climaticZone, setClimaticZone] = useState("");
   const [area, setArea] = useState<number | "">("");
   const [month, setMonth] = useState("1");
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [calculationMode, setCalculationMode] = useState<'month' | 'day'>('month');
   const [results, setResults] = useState<ResultsState | null>(null);
 
   const handleCalculate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (latitude === "" || area === "" || !climaticZone) return;
+    if (latitude === "" || area === "" || !climaticZone) {
+      showError("Please fill in all required fields.");
+      return;
+    }
+    if (calculationMode === 'day' && !date) {
+      showError("Please select a date for day-wise calculation.");
+      return;
+    }
 
     const latNum = Number(latitude);
     const areaNum = Number(area);
-    const monthNum = parseInt(month);
+    
+    let dayOfYear: number;
+    let monthNum: number;
 
-    const dayOfYear = (monthNum - 1) * 30.5 + 15;
+    if (calculationMode === 'month') {
+        monthNum = parseInt(month);
+        dayOfYear = (monthNum - 1) * 30.5 + 15;
+    } else {
+        monthNum = date!.getMonth() + 1;
+        const start = new Date(date!.getFullYear(), 0, 0);
+        const diff = date!.getTime() - start.getTime();
+        const oneDay = 1000 * 60 * 60 * 24;
+        dayOfYear = Math.floor(diff / oneDay);
+    }
+
     const declination = 23.45 * Math.sin(((360 / 365) * (dayOfYear - 81) * Math.PI) / 180);
-    const monthlyTilt = latNum - declination;
+    const optimalTilt = latNum - declination;
     const annualTilt = latNum;
 
     let seasonalAdjustment;
     if (monthNum >= 3 && monthNum <= 5) {
-      seasonalAdjustment = "Spring/Summer: Reduce tilt by ~15° from annual optimal";
+      seasonalAdjustment = "Spring/Summer: Reduce tilt by ~15°";
     } else if (monthNum >= 6 && monthNum <= 8) {
-      seasonalAdjustment = "Summer/Monsoon: Reduce tilt by ~15° from annual optimal";
+      seasonalAdjustment = "Summer/Monsoon: Reduce tilt by ~15°";
     } else if (monthNum >= 9 && monthNum <= 11) {
       seasonalAdjustment = "Autumn: Use annual optimal tilt";
     } else {
-      seasonalAdjustment = "Winter: Increase tilt by ~15° from annual optimal";
+      seasonalAdjustment = "Winter: Increase tilt by ~15°";
     }
 
     const zoneFactors: { [key: string]: number } = {
@@ -65,14 +89,14 @@ const CalculatorPage = () => {
     const tiltCorrectionFactor = 1.12;
     const estimatedIrradiance = (baseIrradiance * tiltCorrectionFactor).toFixed(2);
 
-    const panelArea = 1.6; // Average area of a residential solar panel
+    const panelArea = 1.6;
     const maxPanels = Math.floor(areaNum / panelArea);
-    const panelWattage = 330; // Average wattage
-    const systemEfficiency = 0.75; // Includes inverter, wiring, and other losses
+    const panelWattage = 330;
+    const systemEfficiency = 0.75;
     const annualEnergy = ((maxPanels * panelWattage * baseIrradiance * 365 * systemEfficiency) / 1000).toFixed(0);
 
     setResults({
-      tiltAngle: Math.round(monthlyTilt).toString(),
+      tiltAngle: Math.round(optimalTilt).toString(),
       annualTilt: Math.round(annualTilt).toString(),
       seasonalAdj: seasonalAdjustment,
       irradiance: estimatedIrradiance,
@@ -89,7 +113,7 @@ const CalculatorPage = () => {
       animate="visible"
       exit="hidden"
       variants={containerVariants}
-      className="w-full min-h-screen flex items-center justify-center p-4 md:p-8"
+      className="w-full flex items-center justify-center p-4 md:p-8"
     >
       <Card className="w-full max-w-5xl bg-black/30 backdrop-blur-md border-white/20 shadow-2xl text-white">
         <CardHeader>
@@ -123,18 +147,38 @@ const CalculatorPage = () => {
                 <Input id="area" type="number" value={area} onChange={(e) => setArea(e.target.value === '' ? '' : parseFloat(e.target.value))} required placeholder="e.g., 50" className={inputStyles} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="month" className="text-white/90">Month for Analysis</Label>
-                <Select value={month} onValueChange={setMonth} required>
-                  <SelectTrigger id="month" className={inputStyles}><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-gray-900/80 backdrop-blur-sm border-white/20 text-white">
-                    <SelectItem value="1">January</SelectItem><SelectItem value="2">February</SelectItem>
-                    <SelectItem value="3">March</SelectItem><SelectItem value="4">April</SelectItem>
-                    <SelectItem value="5">May</SelectItem><SelectItem value="6">June</SelectItem>
-                    <SelectItem value="7">July</SelectItem><SelectItem value="8">August</SelectItem>
-                    <SelectItem value="9">September</SelectItem><SelectItem value="10">October</SelectItem>
-                    <SelectItem value="11">November</SelectItem><SelectItem value="12">December</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-white/90">Analysis Period</Label>
+                <Tabs value={calculationMode} onValueChange={(value) => setCalculationMode(value as 'month' | 'day')} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 bg-black/20 border-white/20">
+                        <TabsTrigger value="month">Month Wise</TabsTrigger>
+                        <TabsTrigger value="day">Day Wise</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="month">
+                        <div className="space-y-2 pt-2">
+                            <Select value={month} onValueChange={setMonth}>
+                            <SelectTrigger id="month" className={inputStyles}><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-gray-900/80 backdrop-blur-sm border-white/20 text-white">
+                                <SelectItem value="1">January</SelectItem><SelectItem value="2">February</SelectItem>
+                                <SelectItem value="3">March</SelectItem><SelectItem value="4">April</SelectItem>
+                                <SelectItem value="5">May</SelectItem><SelectItem value="6">June</SelectItem>
+                                <SelectItem value="7">July</SelectItem><SelectItem value="8">August</SelectItem>
+                                <SelectItem value="9">September</SelectItem><SelectItem value="10">October</SelectItem>
+                                <SelectItem value="11">November</SelectItem><SelectItem value="12">December</SelectItem>
+                            </SelectContent>
+                            </Select>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="day">
+                        <div className="pt-2 flex justify-center">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                className="rounded-md border bg-black/20"
+                            />
+                        </div>
+                    </TabsContent>
+                </Tabs>
               </div>
               <Button type="submit" className="w-full text-lg bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
                 <CalculatorIcon className="mr-2 h-5 w-5" /> Calculate
@@ -146,7 +190,7 @@ const CalculatorPage = () => {
                 {results ? (
                   <div className="space-y-3">
                     <div className="p-3 bg-black/20 rounded-md shadow-sm">
-                      <p className="text-white/80">Optimal Tilt for Selected Month</p>
+                      <p className="text-white/80">Optimal Tilt for {calculationMode === 'month' ? 'Selected Month' : 'Selected Day'}</p>
                       <p className="font-bold text-yellow-300 text-2xl">{results.tiltAngle}°</p>
                     </div>
                     <div className="p-3 bg-black/20 rounded-md shadow-sm">

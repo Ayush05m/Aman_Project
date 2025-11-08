@@ -69,7 +69,7 @@ const ProjectLayout = () => {
       <Navbar />
       <AnimatePresence mode="wait">
         <main key={location.pathname} className="w-full relative z-10 pt-28 pb-10">
-          <Outlet />
+          <Outlet context={{ timeOfDay }} />
         </main>
       </AnimatePresence>
       <div className="fixed bottom-8 right-8 z-50">

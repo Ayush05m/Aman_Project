@@ -1,255 +1,896 @@
-import React, { useState } from 'react';
-import { Sun, MapPin, Zap, DollarSign, TrendingUp, Leaf, Settings, Calculator, ChevronDown, ChevronUp } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar } from "@/components/ui/calendar";
-import { showError } from '@/utils/toast';
+import React, { useState } from "react";
+import {
+  Sun,
+  MapPin,
+  Calendar,
+  Zap,
+  TrendingUp,
+  Activity,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { useOutletContext } from "react-router-dom";
 
-interface SolarResults {
-  tilt: { optimal: number; monthly: number; annual: number; summer: number; winter: number; sunAltitude: number; };
-  radiation: { dni: number; dhi: number; ghi: number; poi: number; irradiance: number; };
-  system: { numPanels: number; totalArea: number; spaceUtil: number; capacity: number; };
-  energy: { daily: number; monthly: number; annual: number; peakPower: number; capacityFactor: number; };
-  economics: { totalCost: number; annualSavings: number; lifetimeSavings: number; payback: number; roi: number; npv: number; };
-  environment: { co2: number; co2Lifetime: number; trees: number; coal: number; cars: string; };
-  recommendations: string[];
-}
+type ContextType = { timeOfDay: "day" | "evening" | "night" };
 
-export default function CalculatorPage() {
-  const [formData, setFormData] = useState({
-    latitude: 21.25,
-    longitude: 81.63,
+const SolarCalculator = () => {
+  const { timeOfDay } = useOutletContext<ContextType>();
+  const isDay = timeOfDay === "day";
+
+  const textColor = isDay ? "text-slate-800" : "text-white";
+  const subTextColor = isDay ? "text-slate-600" : "text-blue-200";
+  const cardBg = isDay ? "bg-white/40" : "bg-white/10";
+  const cardBorder = isDay ? "border-slate-300/50" : "border-white/20";
+  const inputBg = isDay ? "bg-white/50" : "bg-white/20";
+  const inputBorder = isDay ? "border-slate-400/50" : "border-white/30";
+  const chartStrokeColor = isDay ? "#334155" : "#fff"; // slate-700
+
+  const [inputs, setInputs] = useState({
+    latitude: 21.2514,
+    longitude: 81.6296,
+    climateZone: "composite",
+    availableArea: 100,
+    dayOfYear: 172,
     altitude: 298,
-    climaticZone: 'moderate',
-    area: 50,
-    panelEfficiency: 20,
-    systemLoss: 15,
-    panelWattage: 400,
-    month: 6,
-    analysisType: 'annual',
-    electricityRate: 7.5,
-    installCost: 50000
   });
 
-  const [results, setResults] = useState<SolarResults | null>(null);
-  const [expandedSections, setExpandedSections] = useState({
-    location: true,
-    system: true,
-    time: true,
-    economic: true
-  });
-  
-  const [calculationMode, setCalculationMode] = useState<'month' | 'day'>('month');
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [results, setResults] = useState(null);
+  const [showResults, setShowResults] = useState(false);
 
-  type SectionKeys = keyof typeof expandedSections;
-
-  const toggleSection = (section: SectionKeys) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+  const climateZones = {
+    hot_dry: { name: "Hot & Dry", ghi: 6.5, color: "#FF6B35" },
+    warm_humid: { name: "Warm & Humid", ghi: 5.2, color: "#F7931E" },
+    moderate: { name: "Moderate", ghi: 5.8, color: "#FDC830" },
+    composite: { name: "Composite", ghi: 5.5, color: "#4ECDC4" },
+    cold: { name: "Cold", ghi: 5.0, color: "#45B7D1" },
+    cold_cloudy: { name: "Cold & Cloudy", ghi: 4.2, color: "#96CEB4" },
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: parseFloat(value) || value
-    }));
-  };
+  // ASHRAE Clear Sky Model Calculations
+  const calculateSolarParameters = (lat, day, alt = 0) => {
+    const phi = (lat * Math.PI) / 180;
 
-  const calculateSolarMetrics = () => {
-    const {
-      latitude, longitude, altitude, climaticZone, area,
-      panelEfficiency, systemLoss, panelWattage, month,
-      analysisType, electricityRate, installCost
-    } = formData;
+    // Solar declination (Cooper's equation)
+    const delta =
+      23.45 * Math.sin(((360 * (284 + day)) / 365) * (Math.PI / 180)) * (Math.PI / 180);
 
-    if (!latitude || !area || !climaticZone) {
-        showError("Please fill in all required fields.");
-        return;
-    }
-    if (calculationMode === 'day' && !date) {
-        showError("Please select a date for day-wise calculation.");
-        return;
-    }
+    // Hour angle at solar noon
+    const omega = 0;
 
-    let dayOfYear;
-    let currentMonth = month;
-    if (calculationMode === 'day' && date) {
-        const start = new Date(date.getFullYear(), 0, 0);
-        const diff = date.getTime() - start.getTime();
-        const oneDay = 1000 * 60 * 60 * 24;
-        dayOfYear = Math.floor(diff / oneDay);
-        currentMonth = date.getMonth() + 1;
-    } else {
-        dayOfYear = (month - 1) * 30.5 + 15;
-    }
+    // Solar altitude angle
+    const sinAlpha =
+      Math.sin(phi) * Math.sin(delta) +
+      Math.cos(phi) * Math.cos(delta) * Math.cos(omega);
+    const alpha = Math.asin(sinAlpha);
+    const alphaDeg = (alpha * 180) / Math.PI;
 
-    const declination = 23.45 * Math.sin((360/365) * (dayOfYear - 81) * Math.PI / 180);
-    const sinAltitude = Math.sin(latitude * Math.PI / 180) * Math.sin(declination * Math.PI / 180) + 
-                       Math.cos(latitude * Math.PI / 180) * Math.cos(declination * Math.PI / 180);
-    const sunAltitude = Math.asin(sinAltitude) * 180 / Math.PI;
-    const monthlyTilt = latitude - declination;
-    const annualTilt = latitude;
-    const summerTilt = latitude - 15;
-    const winterTilt = latitude + 15;
+    // Extraterrestrial radiation
+    const Gsc = 1367; // Solar constant W/m²
+    const E0 = 1 + 0.033 * Math.cos((360 * day) / 365 * (Math.PI / 180));
+    const Gon = Gsc * E0;
 
-    let optimalTilt;
-    if (calculationMode === 'day') {
-        optimalTilt = monthlyTilt;
-    } else if (analysisType === 'monthly') {
-      optimalTilt = monthlyTilt;
-    } else if (analysisType === 'seasonal') {
-      optimalTilt = (currentMonth >= 4 && currentMonth <= 9) ? summerTilt : winterTilt;
-    } else {
-      optimalTilt = annualTilt;
-    }
+    // Air mass
+    const m =
+      1 / (sinAlpha + 0.50572 * Math.pow(alphaDeg + 6.07995, -1.6364));
 
-    const zoneFactors: { [key: string]: any } = {
-      'hot-dry': { cloudFactor: 0.95 }, 'warm-humid': { cloudFactor: 0.80 },
-      'moderate': { cloudFactor: 0.88 }, 'cold-sunny': { cloudFactor: 0.92 },
-      'cold-cloudy': { cloudFactor: 0.70 }, 'composite': { cloudFactor: 0.85 }
+    // Atmospheric transmittance for beam radiation
+    const tau_b = 0.56 * (Math.exp(-0.65 * m) + Math.exp(-0.095 * m));
+
+    // Direct Normal Irradiance
+    const DNI = Gon * tau_b;
+
+    // Diffuse Horizontal Irradiance
+    const tau_d = 0.271 - 0.294 * tau_b;
+    const DHI = Gon * tau_d * sinAlpha;
+
+    // Global Horizontal Irradiance
+    const GHI = DNI * sinAlpha + DHI;
+
+    // Altitude correction (7% increase per 1000m)
+    const altCorrection = 1 + (alt / 1000) * 0.07;
+
+    return {
+      declination: (delta * 180) / Math.PI,
+      solarAltitude: alphaDeg,
+      airMass: m,
+      DNI: DNI * altCorrection,
+      DHI: DHI * altCorrection,
+      GHI: GHI * altCorrection,
+      Gon: Gon,
     };
-    const zoneData = zoneFactors[climaticZone];
-    const altitudeCorrection = 1 + (altitude / 1000) * 0.07;
-    const extraterrestrialRadiation = 1367;
-    const airMass = 1 / Math.sin(Math.max(sunAltitude, 5) * Math.PI / 180);
-    const taub = 0.4;
-    const dni = (extraterrestrialRadiation * Math.exp(-taub * airMass)) * zoneData.cloudFactor / 1000 * 8;
-    const taud = 2.0;
-    const dhi = (extraterrestrialRadiation * Math.exp(-taud * airMass) * 0.5) * zoneData.cloudFactor / 1000 * 8;
-    const ghi = dni * Math.sin(sunAltitude * Math.PI / 180) + dhi;
-    const tiltAngleRad = optimalTilt * Math.PI / 180;
-    const declinationRad = declination * Math.PI / 180;
-    const latitudeRad = latitude * Math.PI / 180;
-    const cosIncidence = Math.sin(latitudeRad - tiltAngleRad) * Math.sin(declinationRad) + 
-                        Math.cos(latitudeRad - tiltAngleRad) * Math.cos(declinationRad);
-    const tiltCorrectionFactor = Math.max(cosIncidence / Math.cos(latitudeRad), 1);
-    const poi = (dni * Math.max(cosIncidence, 0) + dhi * (1 + Math.cos(tiltAngleRad)) / 2 + 
-                ghi * 0.2 * (1 - Math.cos(tiltAngleRad)) / 2);
-    const estimatedIrradiance = poi * tiltCorrectionFactor * altitudeCorrection;
-    const panelArea = panelWattage / 200;
-    const maxPanels = Math.floor(area / panelArea);
-    const totalPanelArea = maxPanels * panelArea;
-    const spaceUtilization = (totalPanelArea / area * 100);
-    const systemCapacity = (maxPanels * panelWattage / 1000);
-    const systemEfficiencyFactor = (1 - systemLoss / 100) * (panelEfficiency / 100);
-    const dailyGeneration = systemCapacity * estimatedIrradiance * systemEfficiencyFactor;
-    const monthlyGeneration = dailyGeneration * 30;
-    const seasonalVariation = [0.85, 0.90, 0.95, 1.00, 1.05, 1.05, 0.90, 0.95, 1.00, 1.05, 0.95, 0.85];
-    let annualGeneration = 0;
-    for (let m = 0; m < 12; m++) {
-      annualGeneration += dailyGeneration * seasonalVariation[m] * 30;
+  };
+
+  const calculateOptimalTilt = (lat, day, solarParams) => {
+    const delta = solarParams.declination;
+
+    // Monthly optimal tilt (ASHRAE approach)
+    const monthlyTilt = lat - delta;
+
+    // Annual optimal tilt (approximately equal to latitude)
+    const annualTilt = lat;
+
+    // Summer optimization (latitude - 15°)
+    const summerTilt = lat - 15;
+
+    // Winter optimization (latitude + 15°)
+    const winterTilt = lat + 15;
+
+    // Seasonal adjustment based on day of year
+    let seasonalTilt;
+    if (day >= 80 && day <= 172) {
+      // Spring
+      seasonalTilt = lat - 10;
+    } else if (day > 172 && day <= 266) {
+      // Summer
+      seasonalTilt = summerTilt;
+    } else if (day > 266 && day <= 355) {
+      // Fall
+      seasonalTilt = lat - 5;
+    } else {
+      // Winter
+      seasonalTilt = winterTilt;
     }
-    const peakPower = systemCapacity;
-    const capacityFactor = (annualGeneration / (systemCapacity * 8760)) * 100;
-    const totalInstallationCost = systemCapacity * installCost;
-    const annualSavings = annualGeneration * electricityRate;
-    const lifetimeSavings = annualSavings * 25;
-    const paybackPeriod = totalInstallationCost / annualSavings;
-    const roi = ((lifetimeSavings - totalInstallationCost) / totalInstallationCost * 100);
-    const discountRate = 0.06;
-    let npv = -totalInstallationCost;
-    for (let year = 1; year <= 25; year++) {
-      npv += annualSavings * (1 - 0.005 * year) / Math.pow(1 + discountRate, year);
+
+    return {
+      monthly: Math.max(0, Math.min(90, monthlyTilt)),
+      annual: Math.max(0, Math.min(90, annualTilt)),
+      summer: Math.max(0, Math.min(90, summerTilt)),
+      winter: Math.max(0, Math.min(90, winterTilt)),
+      seasonal: Math.max(0, Math.min(90, seasonalTilt)),
+      recommended: Math.max(0, Math.min(90, seasonalTilt)),
+    };
+  };
+
+  const calculatePOA = (tiltAngle, lat, day, solarParams) => {
+    const beta = (tiltAngle * Math.PI) / 180;
+    const phi = (lat * Math.PI) / 180;
+    const delta = (solarParams.declination * Math.PI) / 180;
+
+    // Incidence angle on tilted surface
+    const cosTheta =
+      Math.sin(delta) * Math.sin(phi) * Math.cos(beta) -
+      Math.sin(delta) * Math.cos(phi) * Math.sin(beta) +
+      Math.cos(delta) * Math.cos(phi) * Math.cos(beta);
+
+    // Plane of Array irradiance
+    const Rb =
+      Math.max(0, cosTheta) /
+      Math.max(0.1, Math.sin((solarParams.solarAltitude * Math.PI) / 180));
+    const POA =
+      solarParams.DNI * Math.max(0, cosTheta) +
+      (solarParams.DHI * (1 + Math.cos(beta))) / 2;
+
+    return Math.max(0, POA);
+  };
+
+  const calculateResults = () => {
+    const { latitude, dayOfYear, climateZone, availableArea, altitude } =
+      inputs;
+
+    // Calculate solar parameters
+    const solarParams = calculateSolarParameters(latitude, dayOfYear, altitude);
+
+    // Calculate optimal tilt angles
+    const tiltAngles = calculateOptimalTilt(latitude, dayOfYear, solarParams);
+
+    // Calculate POA for recommended tilt
+    const poaIrradiance = calculatePOA(
+      tiltAngles.recommended,
+      latitude,
+      dayOfYear,
+      solarParams,
+    );
+
+    // System assumptions (optimized)
+    const panelEfficiency = 0.21; // 21% - High efficiency monocrystalline
+    const systemLoss = 0.14; // 14% - Optimized system losses
+    const effectiveEfficiency = panelEfficiency * (1 - systemLoss);
+
+    // Panel specifications (calculated based on efficiency)
+    const panelWattage = 450; // High-efficiency panel
+    const panelArea = 2.1; // m² per panel
+
+    // System configuration
+    const numberOfPanels = Math.floor(availableArea / panelArea);
+    const actualArea = numberOfPanels * panelArea;
+    const systemCapacity = (numberOfPanels * panelWattage) / 1000; // kW
+
+    // Energy calculations
+    const peakSunHours = poaIrradiance / 1000; // Convert W/m² to kWh/m²/day
+    const dailyEnergy =
+      (systemCapacity * peakSunHours * effectiveEfficiency) / panelEfficiency;
+    const monthlyEnergy = dailyEnergy * 30;
+    const annualEnergy = dailyEnergy * 365;
+
+    // Capacity factor
+    const capacityFactor = ((dailyEnergy * 365) / (systemCapacity * 8760)) * 100;
+
+    // Environmental impact
+    const co2OffsetAnnual = annualEnergy * 0.82; // kg CO2 per kWh (India grid)
+    const treesEquivalent = co2OffsetAnnual / 21.77; // kg CO2 absorbed per tree per year
+    const coalSaved = annualEnergy * 0.45; // kg coal per kWh
+
+    // Generate data for graphs
+    const tiltRadiationData = [];
+    for (let tilt = 0; tilt <= 90; tilt += 5) {
+      const poa = calculatePOA(tilt, latitude, dayOfYear, solarParams);
+      tiltRadiationData.push({
+        tilt: tilt,
+        irradiance: (poa / 1000).toFixed(2),
+        energy: (
+          ((poa / 1000) * systemCapacity * effectiveEfficiency) /
+          panelEfficiency
+        ).toFixed(2),
+      });
     }
-    const co2PerKwh = 0.82;
-    const co2Offset = annualGeneration * co2PerKwh;
-    const co2Lifetime = co2Offset * 25 / 1000;
-    const treesEquivalent = Math.round(co2Offset / 21);
-    const coalSaved = annualGeneration * 0.6;
-    const carsOffRoad = (co2Offset / 4600).toFixed(2);
-    const recommendations = [];
-    if (spaceUtilization < 70) recommendations.push("Consider higher wattage panels to better utilize space.");
-    if (optimalTilt < 10) recommendations.push("Low tilt angle may cause dust accumulation; increase cleaning.");
-    if (optimalTilt > 45) recommendations.push("High tilt angle; ensure structural support for wind loads.");
-    if (climaticZone === 'warm-humid' || climaticZone === 'cold-cloudy') recommendations.push("Consider anti-reflective coating for cloudy conditions.");
-    if (paybackPeriod < 7) recommendations.push("Excellent ROI; consider expanding system capacity.");
-    if (capacityFactor > 18) recommendations.push("Excellent capacity factor; system is well optimized.");
-    recommendations.push("Recommended orientation: True South (180° azimuth).");
+
+    // Seasonal comparison data
+    const seasonalData = [
+      { season: "Winter", day: 15, tilt: tiltAngles.winter },
+      { season: "Spring", day: 105, tilt: latitude - 10 },
+      { season: "Summer", day: 195, tilt: tiltAngles.summer },
+      { season: "Fall", day: 288, tilt: latitude - 5 },
+    ].map((s) => {
+      const sp = calculateSolarParameters(latitude, s.day, altitude);
+      const poa = calculatePOA(s.tilt, latitude, s.day, sp);
+      return {
+        season: s.season,
+        tilt: s.tilt.toFixed(1),
+        irradiance: (poa / 1000).toFixed(2),
+        altitude: sp.solarAltitude.toFixed(1),
+      };
+    });
+
+    // Yearly energy distribution
+    const yearlyData = [];
+    for (let month = 1; month <= 12; month++) {
+      const day = Math.floor((month - 1) * 30.5 + 15);
+      const sp = calculateSolarParameters(latitude, day, altitude);
+      const tilt = calculateOptimalTilt(latitude, day, sp);
+      const poa = calculatePOA(tilt.seasonal, latitude, day, sp);
+      const energy =
+        (((poa / 1000) * systemCapacity * effectiveEfficiency) /
+          panelEfficiency) *
+        30;
+      yearlyData.push({
+        month: [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ][month - 1],
+        energy: energy.toFixed(0),
+        tilt: tilt.seasonal.toFixed(1),
+      });
+    }
+
+    // Radiation components
+    const radiationData = [
+      { component: "DNI", value: (solarParams.DNI / 1000).toFixed(2) },
+      { component: "DHI", value: (solarParams.DHI / 1000).toFixed(2) },
+      { component: "GHI", value: (solarParams.GHI / 1000).toFixed(2) },
+      { component: "POA", value: (poaIrradiance / 1000).toFixed(2) },
+    ];
 
     setResults({
-      tilt: { optimal: optimalTilt, monthly: monthlyTilt, annual: annualTilt, summer: summerTilt, winter: winterTilt, sunAltitude },
-      radiation: { dni, dhi, ghi, poi, irradiance: estimatedIrradiance },
-      system: { numPanels: maxPanels, totalArea: totalPanelArea, spaceUtil: spaceUtilization, capacity: systemCapacity },
-      energy: { daily: dailyGeneration, monthly: monthlyGeneration, annual: annualGeneration, peakPower, capacityFactor },
-      economics: { totalCost: totalInstallationCost, annualSavings, lifetimeSavings, payback: paybackPeriod, roi, npv },
-      environment: { co2: co2Offset, co2Lifetime, trees: treesEquivalent, coal: coalSaved, cars: carsOffRoad },
-      recommendations
+      tiltAngles,
+      solarParams,
+      poaIrradiance,
+      panelWattage,
+      panelEfficiency: panelEfficiency * 100,
+      systemLoss: systemLoss * 100,
+      numberOfPanels,
+      actualArea,
+      systemCapacity,
+      dailyEnergy,
+      monthlyEnergy,
+      annualEnergy,
+      capacityFactor,
+      co2OffsetAnnual,
+      treesEquivalent,
+      coalSaved,
+      tiltRadiationData,
+      seasonalData,
+      yearlyData,
+      radiationData,
     });
-  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    calculateSolarMetrics();
+    setShowResults(true);
   };
 
   return (
-    <div className="min-h-screen bg-transparent p-6">
+    <div className={`min-h-screen ${textColor} p-8`}>
       <div className="max-w-7xl mx-auto">
-        <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-8 mb-6 border border-white/20 shadow-2xl">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <Sun className="w-12 h-12 text-yellow-400 animate-pulse" />
-            <h1 className="text-4xl font-bold text-white text-center">Advanced Solar Calculator</h1>
-          </div>
-          <p className="text-center text-purple-200 text-lg">ASHRAE Model-Based Solar Energy Optimization</p>
+        {/* Header */}
+        <div className="text-center mb-12 animate-fade-in">
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 bg-clip-text text-transparent">
+            Solar Panel Optimizer for India
+          </h1>
+          <p className={`text-xl ${subTextColor}`}>
+            ASHRAE Clear Sky Model | NIT Raipur
+          </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {(Object.keys(expandedSections) as SectionKeys[]).map((sectionKey) => (
-                <div key={sectionKey} className="border border-purple-400/30 rounded-2xl p-6 bg-white/5">
-                  <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleSection(sectionKey)}>
-                    <div className="flex items-center gap-3">
-                      {sectionKey === 'location' && <MapPin className="w-6 h-6 text-purple-400" />}
-                      {sectionKey === 'system' && <Settings className="w-6 h-6 text-purple-400" />}
-                      {sectionKey === 'time' && <Calculator className="w-6 h-6 text-purple-400" />}
-                      {sectionKey === 'economic' && <DollarSign className="w-6 h-6 text-purple-400" />}
-                      <h3 className="text-xl font-semibold text-white capitalize">{sectionKey} Parameters</h3>
-                    </div>
-                    {expandedSections[sectionKey] ? <ChevronUp className="w-5 h-5 text-purple-400" /> : <ChevronDown className="w-5 h-5 text-purple-400" />}
-                  </div>
-                  {expandedSections[sectionKey] && (
-                    <div className="mt-4 space-y-4">
-                      {sectionKey === 'location' && <>
-                        <div><label className="block text-purple-200 mb-2 font-medium">Latitude (°)</label><input type="number" name="latitude" value={formData.latitude} onChange={handleInputChange} step="0.01" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500" placeholder="e.g., 21.25" /></div>
-                        <div><label className="block text-purple-200 mb-2 font-medium">Longitude (°)</label><input type="number" name="longitude" value={formData.longitude} onChange={handleInputChange} step="0.01" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500" placeholder="e.g., 81.63" /></div>
-                        <div><label className="block text-purple-200 mb-2 font-medium">Altitude (m)</label><input type="number" name="altitude" value={formData.altitude} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500" placeholder="e.g., 298" /></div>
-                        <div><label className="block text-purple-200 mb-2 font-medium">Climatic Zone</label><select name="climaticZone" value={formData.climaticZone} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500"><option value="hot-dry" className="bg-purple-900">Hot & Dry</option><option value="warm-humid" className="bg-purple-900">Warm & Humid</option><option value="moderate" className="bg-purple-900">Moderate</option><option value="cold-sunny" className="bg-purple-900">Cold & Sunny</option><option value="cold-cloudy" className="bg-purple-900">Cold & Cloudy</option><option value="composite" className="bg-purple-900">Composite</option></select></div>
-                      </>}
-                      {sectionKey === 'system' && <>
-                        <div><label className="block text-purple-200 mb-2 font-medium">Available Area (m²)</label><input type="number" name="area" value={formData.area} onChange={handleInputChange} step="0.1" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500" placeholder="e.g., 50" /></div>
-                        <div><label className="block text-purple-200 mb-2 font-medium">Panel Efficiency (%)</label><input type="number" name="panelEfficiency" value={formData.panelEfficiency} onChange={handleInputChange} step="0.1" min="10" max="25" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500" /></div>
-                        <div><label className="block text-purple-200 mb-2 font-medium">System Loss (%)</label><input type="number" name="systemLoss" value={formData.systemLoss} onChange={handleInputChange} step="0.1" min="5" max="30" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500" /></div>
-                        <div><label className="block text-purple-200 mb-2 font-medium">Panel Wattage (W)</label><select name="panelWattage" value={formData.panelWattage} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500"><option value="300" className="bg-purple-900">300W</option><option value="350" className="bg-purple-900">350W</option><option value="400" className="bg-purple-900">400W</option><option value="450" className="bg-purple-900">450W</option><option value="500" className="bg-purple-900">500W</option></select></div>
-                      </>}
-                      {sectionKey === 'time' && <Tabs value={calculationMode} onValueChange={(v) => setCalculationMode(v as any)} className="w-full"><TabsList className="grid w-full grid-cols-2 bg-black/20"><TabsTrigger value="month">Month Wise</TabsTrigger><TabsTrigger value="day">Day Wise</TabsTrigger></TabsList><TabsContent value="month" className="mt-4 space-y-4"><div><label className="block text-purple-200 mb-2 font-medium">Analysis Month</label><select name="month" value={formData.month} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500">{['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m, i) => (<option key={i} value={i + 1} className="bg-purple-900">{m}</option>))}</select></div><div><label className="block text-purple-200 mb-2 font-medium">Analysis Type</label><select name="analysisType" value={formData.analysisType} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500"><option value="monthly" className="bg-purple-900">Monthly</option><option value="seasonal" className="bg-purple-900">Seasonal</option><option value="annual" className="bg-purple-900">Annual Fixed</option></select></div></TabsContent><TabsContent value="day" className="mt-4 flex justify-center"><Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border bg-black/20" /></TabsContent></Tabs>}
-                      {sectionKey === 'economic' && <>
-                        <div><label className="block text-purple-200 mb-2 font-medium">Electricity Rate (₹/kWh)</label><input type="number" name="electricityRate" value={formData.electricityRate} onChange={handleInputChange} step="0.1" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500" /></div>
-                        <div><label className="block text-purple-200 mb-2 font-medium">Installation Cost (₹/kW)</label><input type="number" name="installCost" value={formData.installCost} onChange={handleInputChange} step="1000" className="w-full px-4 py-3 rounded-xl bg-white/10 border border-purple-400/30 text-white focus:ring-2 focus:ring-purple-500" /></div>
-                      </>}
-                    </div>
-                  )}
-                </div>
-              ))}
-              <button type="submit" className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 rounded-2xl transition transform hover:scale-105 shadow-2xl flex items-center justify-center gap-3 text-lg"><Calculator className="w-6 h-6" />Calculate Analysis</button>
-            </form>
+        {/* Input Section */}
+        <div
+          className={`${cardBg} backdrop-blur-lg rounded-2xl p-8 mb-8 shadow-2xl border ${cardBorder}`}
+        >
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+            <MapPin className="w-6 h-6 text-yellow-400" />
+            Input Parameters
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Latitude */}
+            <div>
+              <label
+                className={`block text-sm font-semibold mb-2 ${subTextColor}`}
+              >
+                Latitude (°N)
+              </label>
+              <input
+                type="number"
+                step="0.0001"
+                value={inputs.latitude}
+                onChange={(e) =>
+                  setInputs({
+                    ...inputs,
+                    latitude: parseFloat(e.target.value) || 0,
+                  })
+                }
+                className={`w-full px-4 py-3 ${inputBg} rounded-lg border ${inputBorder} focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/50 outline-none transition-all`}
+                placeholder="e.g., 21.2514"
+              />
+              <p
+                className={`text-xs ${
+                  isDay ? "text-slate-500" : "text-blue-300"
+                } mt-1`}
+              >
+                NIT Raipur: 21.2514°N
+              </p>
+            </div>
+
+            {/* Longitude */}
+            <div>
+              <label
+                className={`block text-sm font-semibold mb-2 ${subTextColor}`}
+              >
+                Longitude (°E)
+              </label>
+              <input
+                type="number"
+                step="0.0001"
+                value={inputs.longitude}
+                onChange={(e) =>
+                  setInputs({
+                    ...inputs,
+                    longitude: parseFloat(e.target.value) || 0,
+                  })
+                }
+                className={`w-full px-4 py-3 ${inputBg} rounded-lg border ${inputBorder} focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/50 outline-none transition-all`}
+                placeholder="e.g., 81.6296"
+              />
+              <p
+                className={`text-xs ${
+                  isDay ? "text-slate-500" : "text-blue-300"
+                } mt-1`}
+              >
+                NIT Raipur: 81.6296°E
+              </p>
+            </div>
+
+            {/* Day of Year */}
+            <div>
+              <label
+                className={`block text-sm font-semibold mb-2 ${subTextColor}`}
+              >
+                Day of Year (1-365)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="365"
+                value={inputs.dayOfYear}
+                onChange={(e) =>
+                  setInputs({
+                    ...inputs,
+                    dayOfYear: parseInt(e.target.value) || 1,
+                  })
+                }
+                className={`w-full px-4 py-3 ${inputBg} rounded-lg border ${inputBorder} focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/50 outline-none transition-all`}
+                placeholder="e.g., 172"
+              />
+              <p
+                className={`text-xs ${
+                  isDay ? "text-slate-500" : "text-blue-300"
+                } mt-1`}
+              >
+                Day 172 ≈ June 21 (Summer Solstice)
+              </p>
+            </div>
+
+            {/* Climate Zone */}
+            <div>
+              <label
+                className={`block text-sm font-semibold mb-2 ${subTextColor}`}
+              >
+                Climate Zone
+              </label>
+              <select
+                value={inputs.climateZone}
+                onChange={(e) =>
+                  setInputs({ ...inputs, climateZone: e.target.value })
+                }
+                className={`w-full px-4 py-3 ${inputBg} rounded-lg border ${inputBorder} focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/50 outline-none transition-all`}
+              >
+                {Object.entries(climateZones).map(([key, zone]) => (
+                  <option
+                    key={key}
+                    value={key}
+                    className={
+                      isDay
+                        ? "bg-gray-200 text-black"
+                        : "bg-gray-900 text-white"
+                    }
+                  >
+                    {zone.name}
+                  </option>
+                ))}
+              </select>
+              <p
+                className={`text-xs ${
+                  isDay ? "text-slate-500" : "text-blue-300"
+                } mt-1`}
+              >
+                Raipur: Composite Zone
+              </p>
+            </div>
+
+            {/* Available Area */}
+            <div>
+              <label
+                className={`block text-sm font-semibold mb-2 ${subTextColor}`}
+              >
+                Available Roof Area (m²)
+              </label>
+              <input
+                type="number"
+                min="10"
+                value={inputs.availableArea}
+                onChange={(e) =>
+                  setInputs({
+                    ...inputs,
+                    availableArea: parseInt(e.target.value) || 50,
+                  })
+                }
+                className={`w-full px-4 py-3 ${inputBg} rounded-lg border ${inputBorder} focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/50 outline-none transition-all`}
+                placeholder="e.g., 100"
+              />
+              <p
+                className={`text-xs ${
+                  isDay ? "text-slate-500" : "text-blue-300"
+                } mt-1`}
+              >
+                Typical HIG house: 80-150 m²
+              </p>
+            </div>
+
+            {/* Altitude (Optional) */}
+            <div>
+              <label
+                className={`block text-sm font-semibold mb-2 ${subTextColor}`}
+              >
+                Altitude (m) - Optional
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={inputs.altitude}
+                onChange={(e) =>
+                  setInputs({
+                    ...inputs,
+                    altitude: parseInt(e.target.value) || 0,
+                  })
+                }
+                className={`w-full px-4 py-3 ${inputBg} rounded-lg border ${inputBorder} focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/50 outline-none transition-all`}
+                placeholder="e.g., 298"
+              />
+              <p
+                className={`text-xs ${
+                  isDay ? "text-slate-500" : "text-blue-300"
+                } mt-1`}
+              >
+                Default: 2-story building (~6m)
+              </p>
+            </div>
           </div>
-          <div className="space-y-6">
-            {results ? (<>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-2xl text-center text-white transform hover:scale-105 transition"><div className="text-4xl font-bold">{Math.round(results.tilt.optimal)}°</div><div className="text-sm mt-2 opacity-90">Optimal Tilt</div></div>
-                <div className="bg-gradient-to-br from-blue-400 to-purple-500 rounded-2xl p-6 shadow-2xl text-center text-white transform hover:scale-105 transition"><div className="text-4xl font-bold">{results.radiation.irradiance.toFixed(1)}</div><div className="text-sm mt-2 opacity-90">kWh/m²/day</div></div>
-                <div className="bg-gradient-to-br from-green-400 to-teal-500 rounded-2xl p-6 shadow-2xl text-center text-white transform hover:scale-105 transition"><div className="text-4xl font-bold">{results.system.capacity.toFixed(1)}</div><div className="text-sm mt-2 opacity-90">kW System</div></div>
-              </div>
-              <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-6 border border-white/20 shadow-2xl space-y-4"><div className="flex items-center gap-3 border-b border-purple-400/30 pb-3"><Sun className="w-6 h-6 text-yellow-400" /><h3 className="text-2xl font-bold text-white">Tilt Angle Analysis</h3></div><div className="grid grid-cols-2 gap-4 text-purple-200"><div className="bg-white/5 rounded-xl p-4"><div className="text-sm opacity-80">Monthly Optimal</div><div className="text-2xl font-bold text-white">{Math.round(results.tilt.monthly)}°</div></div><div className="bg-white/5 rounded-xl p-4"><div className="text-sm opacity-80">Annual Optimal</div><div className="text-2xl font-bold text-white">{Math.round(results.tilt.annual)}°</div></div><div className="bg-white/5 rounded-xl p-4"><div className="text-sm opacity-80">Summer Tilt</div><div className="text-2xl font-bold text-white">{Math.round(results.tilt.summer)}°</div></div><div className="bg-white/5 rounded-xl p-4"><div className="text-sm opacity-80">Winter Tilt</div><div className="text-2xl font-bold text-white">{Math.round(results.tilt.winter)}°</div></div></div></div>
-              <div className="bg-black/20 backdrop-blur-lg rounded-3xl p-6 border border-white/20 shadow-2xl space-y-4"><div className="flex items-center gap-3 border-b border-purple-400/30 pb-3"><Zap className="w-6 h-6 text-yellow-400" /><h3 className="text-2xl font-bold text-white">ASHRAE Solar Radiation</h3></div><div className="space-y-3 text-purple-200"><div className="flex justify-between items-center bg-white/5 rounded-xl p-3"><span>DNI</span><span className="font-bold text-white">{results.radiation.dni.toFixed(2)} kWh/m²</span></div><div className="flex justify-between items-center bg-white/5 rounded-xl p-3"><span>DHI</span><span className="font-bold text-white">{results.radiation.dhi.toFixed(2)} kWh/m²</span></div><div className="flex justify-between items-center bg-white/5 rounded-xl p-3"><span>GHI</span><span className="font-bold text-white">{results.radiation.ghi.toFixed(2)} kWh/m²</span></div><div className="flex justify-between items-center bg-white/5 rounded-xl p-3"><span>POA Irradiance</span><span className="font-bold text-white">{results.radiation.poi.toFixed(2)} kWh/m²</span></div></div></div>
-            </>) : (<div className="bg-black/20 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl flex items-center justify-center h-full text-center"><div className="text-center"><Calculator className="w-16 h-16 text-purple-300 mx-auto mb-4" /><h3 className="text-2xl font-bold text-white">Your Analysis Awaits</h3><p className="text-purple-200 mt-2">Fill in the parameters to see a detailed solar report.</p></div></div>)}
+
+          {/* Calculate Button */}
+          <div className="mt-8 text-center">
+            <button
+              onClick={calculateResults}
+              className="px-12 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-gray-900 font-bold rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center gap-3 mx-auto"
+            >
+              <Zap className="w-5 h-5" />
+              Calculate Optimal Configuration
+            </button>
           </div>
         </div>
+
+        {/* Results Section */}
+        {showResults && results && (
+          <div className="space-y-8 animate-fade-in">
+            {/* Key Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl p-6 shadow-xl text-gray-900">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold">Optimal Tilt Angle</h3>
+                  <TrendingUp className="w-6 h-6" />
+                </div>
+                <p className="text-4xl font-bold">
+                  {results.tiltAngles.recommended.toFixed(1)}°
+                </p>
+                <p className="text-sm text-gray-800 mt-2">
+                  For Day {inputs.dayOfYear}
+                </p>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 shadow-xl text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold">Solar Irradiance</h3>
+                  <Sun className="w-6 h-6" />
+                </div>
+                <p className="text-4xl font-bold">
+                  {(results.solarParams.GHI / 1000).toFixed(2)}
+                </p>
+                <p className="text-sm text-blue-100 mt-2">kWh/m²/day (GHI)</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-2xl p-6 shadow-xl text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold">System Capacity</h3>
+                  <Activity className="w-6 h-6" />
+                </div>
+                <p className="text-4xl font-bold">
+                  {results.systemCapacity.toFixed(2)}
+                </p>
+                <p className="text-sm text-green-100 mt-2">
+                  kW ({results.numberOfPanels} panels)
+                </p>
+              </div>
+            </div>
+
+            {/* Tilt vs Irradiance Graph */}
+            <div
+              className={`${cardBg} backdrop-blur-lg rounded-2xl p-8 shadow-2xl border ${cardBorder}`}
+            >
+              <h3 className="text-2xl font-bold mb-6">
+                Tilt Angle vs Solar Radiation
+              </h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={results.tiltRadiationData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={isDay ? "#00000030" : "#ffffff30"}
+                  />
+                  <XAxis
+                    dataKey="tilt"
+                    stroke={chartStrokeColor}
+                    label={{
+                      value: "Tilt Angle (°)",
+                      position: "insideBottom",
+                      offset: -5,
+                      fill: chartStrokeColor,
+                    }}
+                  />
+                  <YAxis
+                    stroke={chartStrokeColor}
+                    label={{
+                      value: "Solar Radiation (kWh/m²/day)",
+                      angle: -90,
+                      position: "insideLeft",
+                      fill: chartStrokeColor,
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: isDay ? "#f1f5f9" : "#1e293b",
+                      color: isDay ? "#1e293b" : "#f1f5f9",
+                      border: "none",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="irradiance"
+                    stroke="#fbbf24"
+                    strokeWidth={3}
+                    name="Solar Radiation"
+                    dot={{ fill: "#fbbf24", r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Yearly Energy Distribution */}
+            <div
+              className={`${cardBg} backdrop-blur-lg rounded-2xl p-8 shadow-2xl border ${cardBorder}`}
+            >
+              <h3 className="text-2xl font-bold mb-6">
+                Annual Energy Generation Profile
+              </h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={results.yearlyData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={isDay ? "#00000030" : "#ffffff30"}
+                  />
+                  <XAxis dataKey="month" stroke={chartStrokeColor} />
+                  <YAxis
+                    yAxisId="left"
+                    stroke={chartStrokeColor}
+                    label={{
+                      value: "Energy (kWh)",
+                      angle: -90,
+                      position: "insideLeft",
+                      fill: chartStrokeColor,
+                    }}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    stroke={chartStrokeColor}
+                    label={{
+                      value: "Tilt (°)",
+                      angle: 90,
+                      position: "insideRight",
+                      fill: chartStrokeColor,
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: isDay ? "#f1f5f9" : "#1e293b",
+                      color: isDay ? "#1e293b" : "#f1f5f9",
+                      border: "none",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="energy"
+                    stroke="#34d399"
+                    strokeWidth={3}
+                    name="Monthly Energy (kWh)"
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="tilt"
+                    stroke="#fbbf24"
+                    strokeWidth={3}
+                    name="Optimal Tilt (°)"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Detailed Results */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Tilt Angles */}
+              <div
+                className={`${cardBg} backdrop-blur-lg rounded-xl p-6 shadow-xl border ${cardBorder}`}
+              >
+                <h4 className="text-lg font-bold mb-4 text-yellow-400">
+                  Tilt Angle Analysis
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Recommended:</span>
+                    <span className="font-semibold">
+                      {results.tiltAngles.recommended.toFixed(1)}°
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Annual Optimal:</span>
+                    <span className="font-semibold">
+                      {results.tiltAngles.annual.toFixed(1)}°
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Summer:</span>
+                    <span className="font-semibold">
+                      {results.tiltAngles.summer.toFixed(1)}°
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Winter:</span>
+                    <span className="font-semibold">
+                      {results.tiltAngles.winter.toFixed(1)}°
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* System Configuration */}
+              <div
+                className={`${cardBg} backdrop-blur-lg rounded-xl p-6 shadow-xl border ${cardBorder}`}
+              >
+                <h4 className="text-lg font-bold mb-4 text-green-400">
+                  System Configuration
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Panel Wattage:</span>
+                    <span className="font-semibold">
+                      {results.panelWattage}W
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Panel Efficiency:</span>
+                    <span className="font-semibold">
+                      {results.panelEfficiency.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>System Loss:</span>
+                    <span className="font-semibold">
+                      {results.systemLoss.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Number of Panels:</span>
+                    <span className="font-semibold">
+                      {results.numberOfPanels}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Utilized Area:</span>
+                    <span className="font-semibold">
+                      {results.actualArea.toFixed(1)} m²
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Energy Generation */}
+              <div
+                className={`${cardBg} backdrop-blur-lg rounded-xl p-6 shadow-xl border ${cardBorder}`}
+              >
+                <h4 className="text-lg font-bold mb-4 text-blue-400">
+                  Energy Generation
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Daily:</span>
+                    <span className="font-semibold">
+                      {results.dailyEnergy.toFixed(2)} kWh
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Monthly:</span>
+                    <span className="font-semibold">
+                      {results.monthlyEnergy.toFixed(2)} kWh
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Annual:</span>
+                    <span className="font-semibold">
+                      {results.annualEnergy.toFixed(0)} kWh
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Capacity Factor:</span>
+                    <span className="font-semibold">
+                      {results.capacityFactor.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Solar Parameters */}
+              <div
+                className={`${cardBg} backdrop-blur-lg rounded-xl p-6 shadow-xl border ${cardBorder}`}
+              >
+                <h4 className="text-lg font-bold mb-4 text-purple-400">
+                  ASHRAE Solar Data
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Solar Declination:</span>
+                    <span className="font-semibold">
+                      {results.solarParams.declination.toFixed(2)}°
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Solar Altitude:</span>
+                    <span className="font-semibold">
+                      {results.solarParams.solarAltitude.toFixed(2)}°
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Air Mass:</span>
+                    <span className="font-semibold">
+                      {results.solarParams.airMass.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>DNI:</span>
+                    <span className="font-semibold">
+                      {results.solarParams.DNI.toFixed(0)} W/m²
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Environmental Impact */}
+              <div
+                className={`${cardBg} backdrop-blur-lg rounded-xl p-6 shadow-xl border ${cardBorder}`}
+              >
+                <h4 className="text-lg font-bold mb-4 text-green-400">
+                  Environmental Impact
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>CO₂ Offset/Year:</span>
+                    <span className="font-semibold">
+                      {(results.co2OffsetAnnual / 1000).toFixed(2)} tons
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Trees Equivalent:</span>
+                    <span className="font-semibold">
+                      {Math.round(results.treesEquivalent)} trees
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className={subTextColor}>Coal Saved/Year:</span>
+                    <span className="font-semibold">
+                      {(results.coalSaved / 1000).toFixed(2)} tons
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Performance Recommendations */}
+              <div
+                className={`${cardBg} backdrop-blur-lg rounded-xl p-6 shadow-xl border ${cardBorder}`}
+              >
+                <h4 className="text-lg font-bold mb-4 text-orange-400">
+                  Recommendations
+                </h4>
+                <ul className={`space-y-2 text-sm ${subTextColor}`}>
+                  <li>✓ Adjust tilt seasonally for +8% gain</li>
+                  <li>✓ Clean panels monthly for optimal output</li>
+                  <li>✓ South-facing orientation preferred</li>
+                  <li>✓ Avoid shading from 10 AM - 2 PM</li>
+                  <li>✓ Monitor performance quarterly</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default SolarCalculator;

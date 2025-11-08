@@ -2,6 +2,9 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, Maximize, DollarSign, Leaf } from "lucide-react";
 import React from "react";
+import { useOutletContext } from "react-router-dom";
+
+type ContextType = { timeOfDay: "day" | "evening" | "night" };
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -14,13 +17,37 @@ const itemVariants = {
 };
 
 const goals = [
-    { icon: <Target />, text: "Identify the optimal tilt angle for maximum solar energy capture." },
-    { icon: <Maximize />, text: "Assess and utilize rooftop area efficiently for panel placement." },
-    { icon: <DollarSign />, text: "Help urban households increase solar power output and reduce electricity costs." },
-    { icon: <Leaf />, text: "Promote sustainable living by encouraging clean energy adoption." },
+  {
+    icon: <Target />,
+    text: "Identify the optimal tilt angle for maximum solar energy capture.",
+  },
+  {
+    icon: <Maximize />,
+    text: "Assess and utilize rooftop area efficiently for panel placement.",
+  },
+  {
+    icon: <DollarSign />,
+    text: "Help urban households increase solar power output and reduce electricity costs.",
+  },
+  {
+    icon: <Leaf />,
+    text: "Promote sustainable living by encouraging clean energy adoption.",
+  },
 ];
 
 const Introduction = () => {
+  const { timeOfDay } = useOutletContext<ContextType>();
+  const isDay = timeOfDay === "day";
+
+  const textColor = isDay ? "text-slate-800" : "text-white";
+  const cardTextColor = isDay ? "text-slate-800" : "text-white";
+  const cardSubTextColor = isDay ? "text-slate-700" : "text-white/90";
+  const textShadow = isDay
+    ? "1px 1px 2px rgba(0,0,0,0.2)"
+    : "2px 2px 4px rgba(0,0,0,0.5)";
+  const cardBg = isDay ? "bg-white/40" : "bg-black/20";
+  const cardBorder = isDay ? "border-slate-300/50" : "border-white/20";
+
   return (
     <motion.div
       initial="hidden"
@@ -31,47 +58,74 @@ const Introduction = () => {
     >
       <div className="max-w-5xl w-full space-y-12">
         <motion.div variants={itemVariants}>
-          <h2 className="text-4xl md:text-5xl font-bold text-white text-center" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+          <h2
+            className={`text-4xl md:text-5xl font-bold ${textColor} text-center`}
+            style={{ textShadow }}
+          >
             Introduction
           </h2>
         </motion.div>
-        
+
         <motion.div variants={itemVariants}>
-            <Card className="bg-black/20 backdrop-blur-sm border-white/20 text-white shadow-xl">
-                <CardContent className="p-8 text-lg text-center space-y-4 text-white/90" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.5)' }}>
-                    <p>
-                    Solar energy is becoming an essential part of modern urban living, especially as cities look for cleaner and more sustainable power solutions. However, the performance of a solar panel depends heavily on how it is installed—particularly its tilt angle and the available rooftop area.
-                    </p>
-                    <p>
-                    Our project focuses on HIG (High-Income Group) residential homes, where rooftop spaces are limited and need to be used efficiently.
-                    </p>
-                    <p>
-                    We use the ASHRAE Solar Radiation Model to determine the most suitable tilt angle for solar panel installation based on location and climate conditions.
-                    </p>
-                </CardContent>
-            </Card>
+          <Card
+            className={`${cardBg} backdrop-blur-sm ${cardBorder} ${cardTextColor} shadow-xl`}
+          >
+            <CardContent
+              className="p-8 text-lg text-center space-y-4"
+              style={{
+                textShadow: isDay ? "none" : "1px 1px 3px rgba(0,0,0,0.5)",
+              }}
+            >
+              <p className={cardSubTextColor}>
+                Solar energy is becoming an essential part of modern urban
+                living, especially as cities look for cleaner and more
+                sustainable power solutions. However, the performance of a solar
+                panel depends heavily on how it is installed—particularly its
+                tilt angle and the available rooftop area.
+              </p>
+              <p className={cardSubTextColor}>
+                Our project focuses on HIG (High-Income Group) residential
+                homes, where rooftop spaces are limited and need to be used
+                efficiently.
+              </p>
+              <p className={cardSubTextColor}>
+                We use the ASHRAE Solar Radiation Model to determine the most
+                suitable tilt angle for solar panel installation based on
+                location and climate conditions.
+              </p>
+            </CardContent>
+          </Card>
         </motion.div>
 
         <motion.div variants={itemVariants} className="text-center">
-          <h3 className="text-3xl md:text-4xl font-bold text-white" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+          <h3
+            className={`text-3xl md:text-4xl font-bold ${textColor}`}
+            style={{ textShadow }}
+          >
             Project Goals
           </h3>
         </motion.div>
 
-        <motion.div 
-            variants={containerVariants}
-            className="grid md:grid-cols-2 gap-6"
+        <motion.div
+          variants={containerVariants}
+          className="grid md:grid-cols-2 gap-6"
         >
-            {goals.map((goal, index) => (
-                <motion.div key={index} variants={itemVariants}>
-                    <Card className="bg-black/20 backdrop-blur-sm border-white/20 text-white h-full">
-                        <CardHeader className="flex flex-row items-center gap-4">
-                            {React.cloneElement(goal.icon, { className: "w-8 h-8 text-yellow-300 flex-shrink-0" })}
-                            <CardTitle className="text-xl text-white/90">{goal.text}</CardTitle>
-                        </CardHeader>
-                    </Card>
-                </motion.div>
-            ))}
+          {goals.map((goal, index) => (
+            <motion.div key={index} variants={itemVariants}>
+              <Card
+                className={`${cardBg} backdrop-blur-sm ${cardBorder} ${cardTextColor} h-full`}
+              >
+                <CardHeader className="flex flex-row items-center gap-4">
+                  {React.cloneElement(goal.icon, {
+                    className: "w-8 h-8 text-yellow-500 flex-shrink-0",
+                  })}
+                  <CardTitle className={`text-xl ${cardSubTextColor}`}>
+                    {goal.text}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            </motion.div>
+          ))}
         </motion.div>
       </div>
     </motion.div>

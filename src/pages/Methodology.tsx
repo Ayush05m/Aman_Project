@@ -1,5 +1,8 @@
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
+import { useOutletContext } from "react-router-dom";
+
+type ContextType = { timeOfDay: "day" | "evening" | "night" };
 
 const listContainerVariants = {
   hidden: { opacity: 0 },
@@ -38,13 +41,28 @@ const steps = [
 ];
 
 const Methodology = () => {
+  const { timeOfDay } = useOutletContext<ContextType>();
+  const isDay = timeOfDay === "day";
+
+  const textColor = isDay ? "text-slate-800" : "text-white";
+  const cardTextColor = isDay ? "text-slate-800" : "text-white";
+  const cardSubTextColor = isDay ? "text-slate-700" : "text-white/80";
+  const textShadow = isDay
+    ? "1px 1px 2px rgba(0,0,0,0.2)"
+    : "2px 2px 4px rgba(0,0,0,0.7)";
+  const cardBg = isDay ? "bg-white/40" : "bg-black/20";
+  const cardBorder = isDay ? "border-slate-300/50" : "border-white/20";
+  const numberBg = isDay
+    ? "bg-yellow-400/80 border-yellow-500/50 text-slate-800"
+    : "bg-yellow-500/80 border-yellow-300/50 text-black";
+
   return (
     <div className="w-full min-h-[calc(100vh-14rem)] flex flex-col items-center justify-center p-8">
       <motion.h2
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="text-4xl font-bold text-white mb-12"
-        style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.7)" }}
+        className={`text-4xl font-bold ${textColor} mb-12`}
+        style={{ textShadow }}
       >
         Methodology
       </motion.h2>
@@ -55,7 +73,9 @@ const Methodology = () => {
         transition={{ delay: 0.1 }}
         className="max-w-3xl w-full"
       >
-        <Card className="bg-black/20 backdrop-blur-sm border-white/20 text-white shadow-xl">
+        <Card
+          className={`${cardBg} backdrop-blur-sm ${cardBorder} ${cardTextColor} shadow-xl`}
+        >
           <CardContent className="p-8">
             <motion.ul
               variants={listContainerVariants}
@@ -69,14 +89,16 @@ const Methodology = () => {
                   variants={itemVariants}
                   className="flex items-start gap-4 list-none"
                 >
-                  <div className="flex-shrink-0 bg-yellow-500/80 border border-yellow-300/50 text-black w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg shadow-md">
+                  <div
+                    className={`flex-shrink-0 ${numberBg} w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg shadow-md`}
+                  >
                     {index + 1}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-lg text-white">
+                    <h4 className={`font-semibold text-lg ${cardTextColor}`}>
                       {step.title}
                     </h4>
-                    <p className="text-white/80">{step.description}</p>
+                    <p className={cardSubTextColor}>{step.description}</p>
                   </div>
                 </motion.li>
               ))}

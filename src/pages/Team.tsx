@@ -39,36 +39,36 @@ const TeamPage = () => {
     >
       <motion.h2
         variants={itemVariants}
-        className="text-4xl font-bold text-white mb-8"
+        className="text-4xl md:text-5xl font-bold text-white mb-10"
         style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}
       >
         Meet the Team
       </motion.h2>
-      <motion.div variants={itemVariants} className="w-full max-w-4xl">
+      <motion.div variants={itemVariants} className="w-full max-w-5xl">
         <Card className="bg-black/20 backdrop-blur-sm border-white/20 text-white shadow-2xl">
-          <CardContent className="p-8 flex flex-col md:flex-row items-center gap-8">
-            <Avatar className="w-40 h-40 border-4 border-yellow-300 flex-shrink-0">
+          <CardContent className="p-12 flex flex-col md:flex-row items-center gap-10">
+            <Avatar className="w-48 h-48 border-4 border-yellow-300 flex-shrink-0">
               <AvatarImage src={mentor.image} alt={mentor.name} />
               <AvatarFallback>{mentor.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="text-center md:text-left">
-              <h3 className="text-3xl font-bold">{mentor.name}</h3>
-              <p className="text-lg text-yellow-300">{mentor.title}</p>
-              <p className="text-white/80 mt-2">
+              <h3 className="text-4xl font-bold">{mentor.name}</h3>
+              <p className="text-xl text-yellow-300 mt-1">{mentor.title}</p>
+              <p className="text-white/80 mt-4 text-lg">
                 Guiding our project with expertise and vision.
               </p>
             </div>
           </CardContent>
           <Separator className="bg-white/20" />
-          <CardContent className="p-8">
-            <h4 className="text-2xl font-semibold text-center mb-6">
+          <CardContent className="p-12">
+            <h4 className="text-3xl font-semibold text-center mb-8">
               Project Members
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
               {teamMembers.map((member) => (
-                <div key={member.name}>
-                  <p className="font-bold text-lg">{member.name}</p>
-                  <p className="text-white/70">{member.roll}</p>
+                <div key={member.name} className="p-4 bg-black/20 rounded-lg">
+                  <p className="font-bold text-xl">{member.name}</p>
+                  <p className="text-white/70 mt-1">{member.roll}</p>
                 </div>
               ))}
             </div>
